@@ -3,11 +3,11 @@ import { RNS3 } from "react-native-aws3";
 
 export const uploadDataSet = payload => {
   const config = {
-    keyPrefix: "dataset/",
-    bucket: "training-set-data",
-    region: "us-east-1",
-    accessKey: "AKIAJYJVGNUJ3IR236QA",
-    secretKey: "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",
+    keyPrefix: "insert ucket folder name",
+    bucket: "insert bucket name",
+    region: "insert region here",
+    accessKey: "insert key here",
+    secretKey: "insert secret here",
     successActionStatus: 201
   };
   return RNS3.put(payload.image, config)
