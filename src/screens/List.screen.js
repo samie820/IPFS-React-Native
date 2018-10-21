@@ -13,7 +13,7 @@ import {
   Spinner,
   Body
 } from "native-base";
-import { RefreshControl } from "react-native";
+import { RefreshControl, FlatList } from "react-native";
 import { getAllTrainingData as GetTrainingData } from "../services/trainingData";
 
 export class List extends Component {
@@ -21,7 +21,10 @@ export class List extends Component {
     super(props);
     this.state = {
       dataSet: [],
-      fetching: true
+      fetching: true,
+      pageCount: 0,
+      endReached: false,
+      totalCount: 0
     };
   }
 
@@ -33,12 +36,59 @@ export class List extends Component {
     this.setState(prevState => ({
       fetching: true
     }));
-    GetTrainingData().then(response => {
-      console.log(response);
-      this.setState({
-        dataSet: response.data,
-        fetching: false
+    GetTrainingData()
+      .then(response => {
+        console.log(response);
+        this.setState({
+          dataSet: response.data,
+          totalCount: response.paging.totalCount,
+          fetching: false
+        });
+      })
+      .catch(err => {
+        this.displayToast(err.message, "danger");
+        this.setState({
+          fetching: false
+        });
       });
+  };
+
+  fetchMore = () => {
+    if (this.state.totalCount > this.state.dataSet.length) {
+      this.setState({
+        isFetchingMore: true
+      })
+      GetTrainingData(this.state.pageCount + 1, null, true)
+        .then(response => {
+          console.log(response);
+          if (response.data.length) {
+            this.setState(prevState => ({
+              dataSet: [...prevState.dataSet, ...response.data],
+              pageCount: prevState.pageCount + 1,
+              isFetchingMore: false
+            }));
+          } else {
+            this.setState({
+              endReached: true
+            });
+          }
+        })
+        .catch(err => {
+          this.displayToast(err.message, "danger");
+          this.setState({
+            fetching: false,
+            isFetchingMore: false
+          });
+        });
+    }
+  };
+
+  displayToast = (message, type) => {
+    Toast.show({
+      text: message,
+      position: "top",
+      type: type,
+      duration: 1500
     });
   };
 
@@ -50,15 +100,11 @@ export class List extends Component {
           <Spinner />
         ) : (
           <Content>
-            <NBList
-              refreshControl={
-                <RefreshControl
-                  refreshing={this.state.fetching}
-                  onRefresh={this.getData}
-                />
-              }
-              dataArray={this.state.dataSet}
-              renderRow={item => (
+            <FlatList
+              onRefresh={this.getData}
+              refreshing={this.state.fetching}
+              data={this.state.dataSet}
+              renderItem={({ item }) => (
                 <ListItem key={item._id} thumbnail>
                   <Left>
                     <Thumbnail square source={{ uri: item.url }} />
@@ -73,6 +119,10 @@ export class List extends Component {
                   </Right>
                 </ListItem>
               )}
+              keyExtractor={item => item.url}
+              onEndReached={this.fetchMore}
+              onEndReachedThreshold={0.5}
+              ListFooterComponent={this.state.isFetchingMore && <Spinner />}
             />
           </Content>
         )}
